@@ -1,0 +1,30 @@
+name: Terraform CI
+
+on:
+  pull_request:
+    branches:
+      - main # Run workflow on pull requests to the main branch
+
+jobs:
+  terraform:
+    name: Terraform CI Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0 # Specify your Terraform version
+
+      # Step 3: Run `terraform fmt` (formatting check)
+      - name: Run terraform fmt
+        run: terraform fmt -check -recursive
+
+      # Step 4: Run `terraform validate` (validation check)
+      - name: Run terraform validate
+        run: terraform validate
