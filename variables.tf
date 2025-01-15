@@ -13,3 +13,8 @@ variable "vpc_cidr" {
 variable "environment" {
   default = "dev"
 }
+
+variable "app_port" {
+  type    = number
+  default = 8080
+}
