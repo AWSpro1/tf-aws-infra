@@ -86,4 +86,77 @@ resource "aws_route_table_association" "private_subnet_association" {
   route_table_id = aws_route_table.private.id
 }
 
-# testing terraform CI 
+resource "aws_security_group" "application_security_group" {
+  name   = "application_security_group"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port = 22
+    to_port   = 22
+    protocol  = "tcp"
+
+    # Allow ssh from anywhere
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 80
+    to_port   = 80
+    protocol  = "tcp"
+
+    # Allow HTTP traffic from anywhere
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
+
+    # Allow HTTPS trafic from anywhere
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = var.app_port
+    to_port   = var.app_port
+    protocol  = "tcp"
+
+    #Allow traffic on application specific port 
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Egress rules for outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1" # Allow all outbound traffic
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "application_security_group"
+  }
+}
+
+data "aws_ssm_parameter" "latest_ami" {
+  name = "latest-ami-id"
+}
+
+resource "aws_instance" "application_instance" {
+  ami                     = data.aws_ssm_parameter.latest_ami.value # Uses AMI ID taken from Parameter Store
+  instance_type           = "t2.micro"
+  subnet_id               = element(aws_subnet.public.*.id, 0)                 # Attach to the first public subnet
+  vpc_security_group_ids  = [aws_security_group.application_security_group.id] # Attach the application security group
+  disable_api_termination = false                                              # Allow termination of the instance
+
+  root_block_device {
+    volume_size           = 25    # Root volume size in GiB
+    volume_type           = "gp2" # General Purpose SSD
+    delete_on_termination = true  # Ensure volume is deleted when the instance is terminated
+  }
+
+  tags = {
+    Name = "${var.environment}-application-instance"
+  }
+}
